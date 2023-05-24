@@ -5,32 +5,80 @@ const JSONrows = await parseEPA(content);
 
 createDownloadLink();
 
-const { getNum, postNum, headNum } = HTTPMethodNumber();
-// const { get200,  }
-console.log("GET: " + getNum + " , POST: " + postNum + " , HEAD: " + headNum);
+//Distribution of HTTP methods graph
+const countByMethod = _.countBy(JSONrows, "request.method");
 
 const methodChart = document.getElementById("methodChart");
-const codeChart = document.getElementById("codeChart");
-
-const methodObject = [
-  { label: "GET", count: getNum },
-  { label: "POST", count: postNum },
-  { label: "HEAD", count: headNum },
-];
-
-//const codeObject = [
-//   { label: "200", count: get200 },
-//   { label: "200", count: get200 }
-//]
 
 new Chart(methodChart, {
   type: "bar",
   data: {
-    labels: methodObject.map((row) => row.label),
+    labels: Object.keys(countByMethod),
     datasets: [
       {
-        label: "Distribution of HTTP Methods",
-        data: methodObject.map((row) => row.count),
+        data: Object.values(countByMethod),
+      },
+    ],
+  },
+  options: {
+    plugins: {
+      legend: { display: false },
+    },
+    title: {
+      display: true,
+      text: "Distribution of HTTP methods",
+    },
+  },
+});
+
+// Distribution of HTTP answer codes chart
+const countByResponse = _.countBy(JSONrows, "response_code");
+
+const codeChart = document.getElementById("codeChart");
+
+new Chart(codeChart, {
+  type: "pie",
+  data: {
+    labels: Object.keys(countByResponse),
+    datasets: [
+      {
+        data: Object.values(countByResponse),
+      },
+    ],
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: "top",
+      },
+      title: {
+        display: true,
+        text: "Distribution of HTTP answer codes",
+      },
+    },
+  },
+});
+
+// Distribution of the size of the answer of all requests with code 200 and size < 1000B
+
+const filteredRows = JSONrows.filter(
+  (row) => row.response_code === "200" && row.document_size < 1000
+);
+
+const countBySize = _.countBy(filteredRows, "document_size");
+
+const sizeChart = document.getElementById("sizeChart");
+
+new Chart(sizeChart, {
+  type: "line",
+  data: {
+    labels: Object.keys(countBySize),
+    datasets: [
+      {
+        label:
+          "Distribution of the size of the answer of all requests with code 200 and size < 1000B",
+        data: Object.values(countBySize),
       },
     ],
   },
@@ -43,30 +91,36 @@ new Chart(methodChart, {
   },
 });
 
-function HTTPMethodNumber() {
-  let getNum = 0;
-  let postNum = 0;
-  let headNum = 0;
-  JSONrows.map((row) => {
-    if (row.request.method === "GET") getNum++;
-    if (row.request.method === "POST") postNum++;
-    if (row.request.method === "HEAD") headNum++;
-  });
+// Requests per minute over the entire time span chart
 
-  return {
-    getNum,
-    postNum,
-    headNum,
-  };
-}
+const reqCountByMinute = _.countBy(JSONrows, ({ dateTime }) =>
+  new Date(1995, 7, dateTime.day, dateTime.hour, dateTime.minute).toISOString()
+);
 
-function HTTPCodesNumber() {
-  JSONrows.map((row) => {
-    if (row.response_code === "200") getNum++;
-    if (row.response_code === "302") postNum++;
-    if (row.response_code === "404") headNum++;
-  });
-}
+const reqTimeChart = document.getElementById("reqTimeChart");
+
+new Chart(reqTimeChart, {
+  type: "line",
+  data: {
+    labels: Object.keys(reqCountByMinute),
+    datasets: [
+      {
+        label: "Requests per minute over the entire time span",
+        data: Object.values(reqCountByMinute),
+      },
+    ],
+  },
+  options: {
+    scales: {
+      y: {
+        beginAtZero: true,
+      },
+      x: {
+        type: "time",
+      },
+    },
+  },
+});
 
 async function readEPA() {
   const file = "./epa-http.txt";
