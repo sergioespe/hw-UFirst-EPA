@@ -1,0 +1,12 @@
+*{
+    background-color: white;
+}
+
+.container{
+    display: flex;
+    
+}
+
+.chart{
+    width: 600px;
+}
